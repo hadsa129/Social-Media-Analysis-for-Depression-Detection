@@ -1,0 +1,52 @@
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_test:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root
+      - MONGO_INITDB_DATABASE=depression_social_media
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--username", "root", "--password", "root", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: root
+      ME_CONFIG_MONGODB_AUTH_DATABASE: admin   
+    depends_on:
+      mongo:
+        condition: service_healthy
+  api:
+    build:
+        context: .
+        dockerfile: Dockerfile
+    ports:
+        - "8000:8000"
+    volumes:
+        - .:/app
+    environment:
+        - MONGODB_URI=mongodb://root:root@mongo:27017/?authSource=admin
+        - MONGODB_DB=depression_social_media
+    depends_on:
+        mongo:
+          condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+    mongo_test:
+    
